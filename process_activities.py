@@ -1,6 +1,8 @@
 import pandas as pd
 import json
 
+disney_base_url = 'https://disneyworld.disney.go.com'
+
 def get_park_name(park_id, locations):
     for location in locations:
         if location['id'].split(';')[0] == park_id:
@@ -15,17 +17,22 @@ with open('raw-activities-response.json', 'r') as file:
     locations = data['locations']
 
     # Initialize lists to store extracted data
-    attraction_names = []
+    activity_names = []
+    activity_types = []
+    park_ids = []
     park_names = []
     timings = []
     location_lat = []
     location_lng = []
     height_restrictions = []
+    urls = []
 
     # Extract data from JSON
     for entry in activities:
-        attraction_names.append(entry['name'])
+        activity_names.append(entry['name'])
+        activity_types.append(entry['entityType'])
         park_id = entry['parkIds'][0].split(';')[0]
+        park_ids.append(park_id)
         park_names.append(get_park_name(park_id, locations))
         
         # Extracting timings
@@ -38,19 +45,30 @@ with open('raw-activities-response.json', 'r') as file:
         location_lng.append(entry.get('marker', {}).get('lng', None))
 
         facet = entry.get('facets', {})
-        height_restrictions.append(facet.get('height', None))
+        if 'height' in facet:
+            height_restrictions.append(facet.get('height')[0])
+        else:
+            height_restrictions.append('')
+
+        if 'url' in entry:
+            urls.append(disney_base_url + entry['url'])
+        else:
+            urls.append(None)
 
     # Create DataFrame
     df = pd.DataFrame({
-        'Attraction Name': attraction_names,
+        'Activity Name': activity_names,
+        'Activity Type': activity_types,
+        'Park ID': park_ids,
         'Park Name': park_names,
         'Timings': timings,
         'Height Restrictions': height_restrictions,
+        'URL': urls,
         'Location Lat': location_lat,
         'Location Lng': location_lng
     })
-    df.to_csv("attractions.csv", index=False)
-    print("DataFrame written to attractions.csv")
+    df.to_csv("activities.csv", index=False)
+    print("DataFrame written to activities.csv")
 
     # Display DataFrame
     print(df.columns)
